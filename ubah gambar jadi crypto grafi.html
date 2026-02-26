@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Image to Cryptography Text</title>
+<style>
+body{
+    font-family:Arial, sans-serif;
+    background:#111;
+    color:#00ffcc;
+    text-align:center;
+    padding:20px;
+}
+textarea{
+    width:95%;
+    height:150px;
+    margin-top:10px;
+    border-radius:8px;
+    padding:10px;
+    resize:none;
+    background:#222;
+    color:#0ff;
+    border:1px solid #00ffcc;
+}
+button{
+    margin:10px 5px;
+    padding:12px 20px;
+    border:none;
+    border-radius:12px;
+    cursor:pointer;
+    font-weight:bold;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(0,255,204,0.3);
+}
+button:hover{
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,255,204,0.5);
+}
+.primary{background:#00ffcc;color:#000;}
+.secondary{background:#444;color:#fff;}
+img{
+    max-width:90%;
+    margin-top:20px;
+    border:2px solid #00ffcc;
+    border-radius:8px;
+}
+#copyStatus{
+    margin-top:10px;
+    color:#ff0;
+    font-weight:bold;
+}
+</style>
+</head>
+<body>
+
+<h2>Image ⇄ Cryptography Text Tool</h2>
+
+<input type="file" id="upload" accept="image/*"><br>
+
+<button class="primary" id="convertBtn" disabled>Convert Image to Crypto Text</button>
+<button class="secondary" id="copyBtn" disabled>Copy Text</button>
+
+<div id="copyStatus"></div>
+
+<textarea id="output" placeholder="Hasil cryptography akan muncul di sini..."></textarea>
+
+<hr>
+
+<h3>Decode Text to Image</h3>
+<textarea id="decodeInput" placeholder="Tempel teks cryptography di sini..."></textarea><br>
+<button class="primary" id="decodeBtn">Decode to Image</button>
+
+<div>
+<img id="preview">
+</div>
+
+<script>
+const upload = document.getElementById('upload');
+const convertBtn = document.getElementById('convertBtn');
+const copyBtn = document.getElementById('copyBtn');
+const output = document.getElementById('output');
+const decodeBtn = document.getElementById('decodeBtn');
+const decodeInput = document.getElementById('decodeInput');
+const preview = document.getElementById('preview');
+const copyStatus = document.getElementById('copyStatus');
+
+let imageDataURL = "";
+
+// Upload gambar
+upload.addEventListener('change', function(e){
+    const file = e.target.files[0];
+    if(!file) return;
+
+    if(!file.type.startsWith("image/")){
+        alert("File harus berupa gambar!");
+        return;
+    }
+
+    // Buat canvas untuk compress
+    const reader = new FileReader();
+    reader.onload = function(event){
+        const img = new Image();
+        img.onload = function(){
+            const canvas = document.createElement('canvas');
+            const maxWidth = 400; // sesuaikan ukuran output agar Base64 lebih pendek
+            const scale = Math.min(maxWidth / img.width, 1);
+            canvas.width = img.width * scale;
+            canvas.height = img.height * scale;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            // Konversi ke JPEG kualitas 0.5 → Base64 lebih pendek
+            imageDataURL = canvas.toDataURL('image/jpeg', 0.5);
+            convertBtn.disabled = false;
+            copyBtn.disabled = true;
+            output.value = "";
+            copyStatus.textContent = "";
+        };
+        img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+});
+
+// Convert image ke teks Base64
+convertBtn.addEventListener('click', function(){
+    if(!imageDataURL) return;
+    output.value = imageDataURL;
+    copyBtn.disabled = false;
+    copyStatus.textContent = "";
+});
+
+// Copy teks ke clipboard
+copyBtn.addEventListener('click', async function(){
+    const text = output.value.trim();
+    if(!text) return;
+
+    copyStatus.textContent = "Menyalin...";
+    try {
+        if(navigator.clipboard && window.isSecureContext){
+            await navigator.clipboard.writeText(text);
+        } else {
+            fallbackCopy(text);
+        }
+        copyStatus.textContent = "Berhasil disalin!";
+    } catch {
+        fallbackCopy(text);
+        copyStatus.textContent = "Gagal menyalin dengan API, mencoba fallback...";
+    }
+});
+
+function fallbackCopy(text){
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.style.position = "fixed";
+    textarea.style.top = "-9999px";
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+
+    try {
+        document.execCommand('copy');
+        copyStatus.textContent = "Berhasil disalin (fallback)!";
+    } catch {
+        copyStatus.textContent = "Gagal menyalin sepenuhnya!";
+    }
+    document.body.removeChild(textarea);
+}
+
+// Decode teks Base64 ke gambar
+decodeBtn.addEventListener('click', function(){
+    const text = decodeInput.value.trim();
+    if(!text.startsWith("data:image/")){
+        alert("Teks bukan format gambar valid!");
+        return;
+    }
+    preview.src = text;
+});
+</script>
+
+</body>
+</html>
